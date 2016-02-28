@@ -1,0 +1,18 @@
+html
+  head
+    title!= title
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous")
+    link(rel="stylesheet" href="/styles/main.css")
+    script(src="https://code.jquery.com/jquery-2.1.4.min.js")
+  body
+    div.container
+      div.row
+        div.col-md-12
+          h1.header Projection Screen controller
+          a.btn.btn-default.btn-lg.btn-block.raise(href="#") Raise
+          a.btn.btn-default.btn-lg.btn-block.lower(href="#") Lower
+          a.btn.btn-default.btn-lg.btn-block.stop(href="#") Stop Motor
+          div#feedback
+    script(src="/socket.io/socket.io.js")
+    script(src="/js/page.js")

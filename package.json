@@ -1,0 +1,34 @@
+{
+  "name": "Projector-Screen",
+  "version": "1.0.0",
+  "description": "Particle Photon, Node, Web controller spinning a stepper motor to raise and lower a projection screen",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ndoty/photon-projector-screen"
+  },
+  "keywords": [
+    "particle",
+    "photon",
+    "projector screen",
+    "node",
+    "web"
+  ],
+  "author": "Nicholas Faust-Doty",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ndoty/photon-projector-screen/issues"
+  },
+  "homepage": "https://github.com/ndoty/photon-projector-screen",
+  "dependencies": {
+    "express": "^4.13.3",
+    "fs": "0.0.2",
+    "socket.io": "^1.4.4"
+  },
+  "devDependencies": {
+    "jade": "^1.11.0"
+  }
+}
