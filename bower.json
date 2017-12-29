@@ -1,5 +1,5 @@
 {
-  "name": "Projector-Screen",
+  "name": "projectorscreen",
   "description": "Particle Photon, Node, Web controller spinning a stepper motor to raise and lower a projection screen",
   "main": "server.js",
   "authors": [

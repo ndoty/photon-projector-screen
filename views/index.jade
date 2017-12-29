@@ -8,11 +8,17 @@ html
   body
     div.container
       div.row
+        h1.header Projection Screen controller
+      div.row
+        div(role="alert")#particleAccountConnection.alert.alert-danger.connections Particle account #{data.particleConfig.username} not connected.
+        div(role="alert")#particleDeviceConnection.alert.alert-danger.connections Particle Device #{data.particleConfig.deviceID} not connected.
+        div.row
+          a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.retryDeviceConnection(href="#") Retry Device Connection
+      div.row
         div.col-md-12
-          h1.header Projection Screen controller
-          a.btn.btn-default.btn-lg.btn-block.raise(href="#") Raise
-          a.btn.btn-default.btn-lg.btn-block.lower(href="#") Lower
-          a.btn.btn-default.btn-lg.btn-block.stop(href="#") Stop Motor
-          div#feedback
+          div(role="alert").alert.alert-info#feedback
+          a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.raise(href="#") Raise
+          a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.lower(href="#") Lower
+          a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.stop(href="#") Stop Motor
     script(src="/socket.io/socket.io.js")
     script(src="/js/page.js")
