@@ -2,6 +2,6 @@
     text-align: center;
 }
 
-#feedback, .connections {
+#feedback, #status, .connections, .serverDown {
     text-align: center;
 }

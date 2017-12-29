@@ -11,12 +11,16 @@ html
         h1.header Projection Screen controller
       div.row
         div(role="alert")#particleAccountConnection.alert.alert-danger.connections Particle account #{data.particleConfig.username} not connected.
+            div
+              a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.retryAccountConnection(href="#") Retry Particle Account Connection
         div(role="alert")#particleDeviceConnection.alert.alert-danger.connections Particle Device #{data.particleConfig.deviceID} not connected.
-        div.row
-          a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.retryDeviceConnection(href="#") Retry Device Connection
+          div
+            a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.retryDeviceConnection(href="#") Retry Device Connection
       div.row
         div.col-md-12
-          div(role="alert").alert.alert-info#feedback
+          div(role="alert").alert.alert-danger.hide#serverDown
+          div(role="alert").alert.alert-info.hide#status
+          div(role="alert").alert.alert-info.hide#feedback
           a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.raise(href="#") Raise
           a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.lower(href="#") Lower
           a.btn.btn-default.btn-lg.btn-block.btn-secondary.hide.stop(href="#") Stop Motor

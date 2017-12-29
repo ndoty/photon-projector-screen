@@ -2,6 +2,7 @@ var nconf = require('nconf'),
     express = require('express'),
     Particle = require('particle-api-js'),
     particle = new Particle(),
+    particleTocken,
     particleConnected = false,
     particleConnectionErr,
     particleDeviceConnected = false,
@@ -15,7 +16,7 @@ var nconf = require('nconf'),
     webUIConnected = false,
     stream,
     token,
-    screenStatus,
+    logCount = 0,
     particleConfig = {};
 
 nconf.file({ file: 'particleConfig.json' });
@@ -35,30 +36,29 @@ io.on('connection', function (socket) {
 
     console.log("Web UI Connected");
 
+    socket.emit('serverUp');
+
     if (particleConnected) {
+        stream.emit('particleDisableAccountConnect');
         stream.emit('particleAccountConnected');
         stream.emit('particleAccountMessage', 'Particle account login for ' + particleConfig.username + ' successful.');
+    } else {
+        stream.emit('particleEnableAccountConnect');
     }
 
     if (particleDeviceConnected) {
-        stream.emit('particleEnableButtons');
         stream.emit('particleDeviceConnected');
         stream.emit('particleDeviceMessage', 'Particle Device ' + particleDeviceName + ' with id ' + particleConfig.deviceID + ' is connected.');
-    }
-
-    if (particleDeviceConnectionTryCount > 5) {
+        getStatus();
+    } else {
         stream.emit('particleDeviceEnableConnect');
     }
 
     socket.on('raise', function () {
         if ( particleDeviceConnected) {
-            screenStatus = "raising";
-
             raise(function (data) {
-                if (data.body.return_value === 1) {
-                    stream.emit('screenStatus', 'Screen raised successfully');
-                } else {
-                    stream.emit('screenStatus', 'Error Raising');
+                if (data.body.return_value !== 1) {
+                    stream.emit('feedback', 'Device Function Error with raise');
                 }
             });
         }
@@ -66,13 +66,9 @@ io.on('connection', function (socket) {
 
     socket.on('lower', function () {
         if ( particleDeviceConnected) {
-            screenStatus = "lowering";
-
             lower(function (data) {
-                if (data.body.return_value === 1) {
-                    stream.emit('screenStatus', 'Screen lowered successfully');
-                } else {
-                    stream.emit('screenStatus', 'Error Lowering');
+                if (data.body.return_value !== 1) {
+                    stream.emit('feedback', 'Device Function Error with lower');
                 }
             });
         }
@@ -80,13 +76,9 @@ io.on('connection', function (socket) {
 
     socket.on('stop', function () {
         if ( particleDeviceConnected) {
-            screenStatus = "stopping";
-
             stop(function (data) {
-                if (data.body.return_value === 1) {
-                    stream.emit('screenStatus', 'Screen stopped successfully');
-                } else {
-                    stream.emit('screenStatus', 'Error Stopping');
+                if (data.body.return_value !== 1) {
+                    stream.emit('feedback', 'Device Function Error stop');
                 }
             });
         }
@@ -113,14 +105,12 @@ app.get('/', function (req, res) {
 });
 
 app.get('/raise', function (req, res) {
-    if ( particleDeviceConnected ) {
-        screenStatus = "raising";
-        
+    if ( particleDeviceConnected ) {        
         raise(function (data) {
             if (data.body.return_value === '1') {
-                stream.emit('screenStatus', 'Screen is currently raised');
+                stream.emit('feedback', 'Screen is currently raised');
             } else {
-                stream.emit('screenStatus', 'Error Raising');
+                stream.emit('feedback', 'Error Raising');
             }
         });
     }
@@ -128,14 +118,12 @@ app.get('/raise', function (req, res) {
 });
 
 app.get('/lower', function (req, res) {
-    if ( particleDeviceConnected ) {
-        screenStatus = "lowering";
-        
+    if ( particleDeviceConnected ) {        
         lower(function (data) {
             if (data.body.return_value === '1') {
-                stream.emit('screenStatus', 'Screen is currently lowered');
+                stream.emit('feedback', 'Screen is currently lowered');
             } else {
-                stream.emit('screenStatus', 'Error Lowering');
+                stream.emit('feedback', 'Error Lowering');
             }
         });
     }
@@ -143,26 +131,34 @@ app.get('/lower', function (req, res) {
 });
 
 app.get('/stop', function (req, res) {
-    if ( particleDeviceConnected ) {
-        screenStatus = "stopping";
-        
+    if ( particleDeviceConnected ) {        
         stop(function (data) {
             if (data.body.return_value === '1') {
-                stream.emit('screenStatus', 'Screen is currently stopped');
+                stream.emit('feedback', 'Screen is currently stopped');
             } else {
-                stream.emit('screenStatus', 'Error Stopping');
+                stream.emit('feedback', 'Error Stopping');
             }
         });
     }
     res.render('index', {data: {particleConfig}});
 });
 
-function logMessage (message) {
+function logMessage (message, socket) {
     console.log(message);
 
     if (webUIConnected) {
-        stream.emit('feedback', message);
+        stream.emit(socket, message);
     }
+}
+
+function getParticleEventStream (cb) {
+    particle.getEventStream({ deviceId: particleConfig.deviceID, auth: particleToken }).then(function(particleStream) {
+        particleStream.on('event', function(streamData) {
+            logMessage(streamData.name.replace(/\_/g, ' '), streamData.data);
+            
+            if (cb) cb();
+        });
+    });
 }
 
 function connectParticleAccount (cb) {
@@ -183,7 +179,7 @@ function connectParticleAccount (cb) {
                 stream.emit('particleAccountMessage', message);
             }
 
-            token = data.body.access_token;
+            particleToken = data.body.access_token;
 
             particleConnected = true;
 
@@ -214,7 +210,7 @@ function connectParticleDevice (cb) {
         stream.emit('particleDeviceMessage', message);
     }
 
-    particle.getDevice({ deviceId: particleConfig.deviceID, auth: token }).then(
+    particle.getDevice({ deviceId: particleConfig.deviceID, auth: particleToken }).then(
         function(data){
             particleDeviceConnectionTryCount++;
 
@@ -235,7 +231,7 @@ function connectParticleDevice (cb) {
                 var message = '<br />Unable to connect to Particle Device ' + particleConfig.deviceID 
                 + '.<br />Is the device on and connected to the internet?';
 
-                var tempMessage = message.replace("<br />", "");
+                var tempMessage = message.replace(/\<br \/\>/g, "");
 
                 console.log( tempMessage );
 
@@ -243,9 +239,9 @@ function connectParticleDevice (cb) {
                 
                 if (particleDeviceConnectionTryCount <= 5) {
                     var message = '<br />This was connection attempt ' + particleDeviceConnectionTryCount + 
-                        '.<br /> Retrying connection automatically in 5 minutes.';
+                         '.<br /> Retrying connection automatically in 5 minutes.';
 
-                    var tempMessage = message.replace("<br />", "");
+                    var tempMessage = message.replace(/\<br \/\>/g, "");
                     
                     console.log( tempMessage );
                     
@@ -291,18 +287,30 @@ function connectParticleDevice (cb) {
     );
 }
 
-function raise (cb) {
-    if ( particleDeviceConnected) {
-        var fnRaise = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'raise', auth: token });
-
-        logMessage("Screen is currently " + screenStatus);
+function getStatus (cb) {
+    var fnRaise = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'getStatus', auth: particleToken });
 
         fnRaise.then(
             function(data) {
                 if (cb) cb(data);
                 return data.body.return_value;
             }, function(err) {
-                logMessage('Photon Function error: ' + err);
+                logMessage('feedback', 'Photon Function error: ' + err);
+                if (cb) cb(data);
+            }
+        );
+}
+
+function raise (cb) {
+    if ( particleDeviceConnected) {
+        var fnRaise = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'raise', auth: particleToken });
+
+        fnRaise.then(
+            function(data) {
+                if (cb) cb(data);
+                return data.body.return_value;
+            }, function(err) {
+                logMessage('feedback', 'Photon Function error: ' + err);
                 if (cb) cb(data);
             }
         );
@@ -311,16 +319,14 @@ function raise (cb) {
 
 function lower (cb) {
     if ( particleDeviceConnected) {
-        var fnLower = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'lower', auth: token });
-
-        logMessage("Screen is currently " + screenStatus);
+        var fnLower = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'lower', auth: particleToken });
 
         fnLower.then(
             function(data) {
                 if (cb) cb(data);
                 return data.body.return_value;
             }, function(err) {
-                logMessage('Photon Function error: ' + err);
+                logMessage('feedback', 'Photon Function error: ' + err);
                 if (cb) cb(data);
             }
         );
@@ -329,16 +335,14 @@ function lower (cb) {
 
 function stop (cb) {
     if ( particleDeviceConnected) {
-        var fnLower = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'stop', auth: token });
-
-        logMessage("Screen is currently " + screenStatus);
+        var fnLower = particle.callFunction({ deviceId: particleConfig.deviceID, name: particleConfig.deviceFunction, argument: 'stop', auth: particleToken });
 
         fnLower.then(
             function(data) {
                 if (cb) cb(data);
                 return data.body.return_value;
             }, function(err) {
-                logMessage('Photon Function error: ' + err);
+                logMessage('feedback', 'Photon Function error: ' + err);
                 if (cb) cb(data);
             }
         );
@@ -346,17 +350,21 @@ function stop (cb) {
 }
 
 connectParticleAccount(function () {
-    if (particleConnected) connectParticleDevice();
+    if (particleConnected) {
+        connectParticleDevice(function () {
+            getParticleEventStream();
+        });
+    }
 });
 
 process.on('SIGINT', function () {
     if (webUIConnected) {
-        stream.emit('feedback', "SERVER DOWN");
+        stream.emit('serverDown', "SERVER DOWN");
     }
 
-    logMessage("\nCaught interrupt signal");
+    logMessage('feedback', "\nCaught interrupt signal");
 
-    logMessage("App Exited Safely");
+    logMessage('feedback', "App Exited Safely");
 
     process.exit();
 });

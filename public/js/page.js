@@ -1,24 +1,18 @@
 var socket = io.connect();
 
-socket.on('feedback', function (data) {
-    $('#feedback').append('<p>' + data + '</p>');
-});
-
-socket.on('screenStatus', function (data) {
-    $('#feedback').html('<h2>' + data + '</h2>');
-});
-
-socket.on('particleAccountMessage', function (data) {
-    $('#particleAccountConnection').append(data);
-});
-
+//Socket Handlers
 socket.on('particleAccountConnected', function (data) {
+    particleDisableAccountConnect();
     clearParticleAccount();
     $('#particleAccountConnection').removeClass('alert-danger').addClass('alert-success');
 });
 
-socket.on('particleDeviceMessage', function (data) {
-    $('#particleDeviceConnection').append(data);
+socket.on('particleEnableAccountConnect', function (data) {
+    particleEnableAccountConnect();
+});
+
+socket.on('particleAccountMessage', function (data) {
+    $('#particleAccountConnection').append(data);
 });
 
 socket.on('particleDeviceConnected', function (data) {
@@ -27,42 +21,76 @@ socket.on('particleDeviceConnected', function (data) {
     enableButtons();
 });
 
-socket.on('particleEnableButtons', function (data) {
-    enableButtons();
+socket.on('particleDeviceEnableConnect', function (data) {
+    ennableRetryDeviceConnection();
+});
+
+socket.on('particleDeviceMessage', function (data) {
+    $('#particleDeviceConnection').append(data);
 });
 
 socket.on('particleDeviceMessageClear', function (data) {
     clearParticleDevice();
 });
 
-socket.on('particleDeviceEnableConnect', function (data) {
-    ennableRetryDeviceConnection();
+socket.on('status', function (data) {
+    $('#status').html('<h1>' + data + '</h1>');
+    toggleDisplay("show", $('#status'));
 });
 
+socket.on('feedback', function (data) {
+    $('#feedback').append('<p>' + data + '</p>');
+    toggleDisplay("show", $('#feedback'));
+});
+
+socket.on('particleFeedbackClear', function (data) {
+    clearFeadback();
+});
+
+socket.on('serverDown', function (data) {
+    $('#serverDown').html('<h1>' + data + '</h1>')
+    toggleDisplay("show", $('#serverDown'));
+});
+
+socket.on('serverUp', function (data) {
+    toggleDisplay("hide", $('#serverDown'));
+    $('#serverDown').html('');
+});
+
+
+//Click handlers
 $('body').on('click', '.raise', function () {
         clearFeadback();
         socket.emit('raise');
-        timer();
 });
 
 $('body').on('click', '.lower', function () {
         clearFeadback();
         socket.emit('lower');
-        timer();
 });
 
 $('body').on('click', '.stop', function () {
         clearFeadback();
         socket.emit('stop');
-        timer();
 });
 
 $('body').on('click', '.retryDeviceConnection', function () {
-    $( this ).addClass('hide').removeClass('show');
+    toggleDisplay("hide", $( this ));
     socket.emit('retryDeviceConnection');
 });
 
+
+//Functions
+var toggleDisplay = function (action, $this) {
+    if ( action === "hide" && $this.hasClass('show') ) {
+        $this.removeClass('show').addClass('hide');
+    } else if ( action === "show" && $this.hasClass('hide') ) {
+        $this.removeClass('hide').addClass('show');
+    }
+}
+
 var clearFeadback = function () {
+    toggleDisplay('hide', $('#feedback'));
     $('#feedback').html('');
 }
 
@@ -75,15 +103,17 @@ var clearParticleDevice = function () {
 }
 
 var enableButtons = function () {
-    $('.raise, .lower, .stop').removeClass('hide').addClass('show');
+    toggleDisplay("show",  $('.raise, .lower, .stop'));
+}
+
+var particleEnableAccountConnect = function () {
+    toggleDisplay("show",  $('.retryAccountConnection'));
+}
+
+var particleDisableAccountConnect = function () {
+    toggleDisplay("hide",  $('.retryAccountConnection'));
 }
 
 var ennableRetryDeviceConnection = function () {
-    $('.retryDeviceConnection').removeClass('hide').addClass('show');
-}
-
-var timer = function () {
-    setTimeout(function () {
-        $('#feedback').html('');
-    }, 1 * 60 * 1000);
+    toggleDisplay("show", $('.retryDeviceConnection'));
 }
