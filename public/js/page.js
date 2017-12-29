@@ -1,4 +1,4 @@
-var socket = io.connect('http://localhost:3000');
+var socket = io.connect('http://127.1.0.0:3000');
 
 socket.on('feedback', function (data) {
     $('#feedback').append('<p>' + data + '</p>');
